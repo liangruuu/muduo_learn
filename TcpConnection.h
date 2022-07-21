@@ -136,6 +136,7 @@ private:
     CloseCallback closeCallback_;
     size_t highWaterMark_;
 
+    // 接收缓冲区中的read区域数据是从fd中获取的，发送缓冲区中的read区域数据是要往fd中发送的
     Buffer inputBuffer_;  // 接收数据的缓冲区
     Buffer outputBuffer_; // 发送数据的缓冲区
 };

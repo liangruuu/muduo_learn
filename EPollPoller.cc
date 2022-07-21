@@ -15,6 +15,7 @@ const int kDeleted = 2;
 
 EPollPoller::EPollPoller(EventLoop *loop)
     : Poller(loop),
+      // epoll操作的第一步：epoll_create，创建epoll对象
       epollfd_(::epoll_create1(EPOLL_CLOEXEC)),
       events_(kInitEventListSize) // vector<epoll_event>
 {
@@ -45,6 +46,8 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels)
     /**
      * 第二个参数本身应该存放发生事件fd的event数组，但是实际上为了更方便地扩容
      * 我们装event的数组用的是vector，所以我们需要拿到vector底层数组的起始地址
+     *
+     * epoll操作的第二步：epoll_wait，阻塞线程让epoll对象监听注册fd感兴趣的事件发生
      **/
     int numEvents = ::epoll_wait(epollfd_, &*events_.begin(), static_cast<int>(events_.size()), timeoutMs);
     int saveErrno = errno;
@@ -145,6 +148,7 @@ void EPollPoller::fillActiveChannels(int numEvents, ChannelList *activeChannels)
 {
     for (int i = 0; i < numEvents; ++i)
     {
+        // void* -> Channel*
         Channel *channel = static_cast<Channel *>(events_[i].data.ptr);
         channel->set_revents(events_[i].events);
         activeChannels->push_back(channel); // EventLoop就拿到了它的poller给它返回的所有发生事件的channel列表了
@@ -177,6 +181,7 @@ void EPollPoller::update(int operation, Channel *channel)
     event.data.fd = fd;
     event.data.ptr = channel;
 
+    // epoll操作的第三步：epoll_ctl
     if (::epoll_ctl(epollfd_, operation, fd, &event) < 0)
     {
         if (operation == EPOLL_CTL_DEL)

@@ -43,6 +43,9 @@ ssize_t Buffer::readFd(int fd, int *saveErrno)
 
 ssize_t Buffer::writeFd(int fd, int *saveErrno)
 {
+    /**
+     * peek()表示可读数据的起始位置，意思是把全部的可读数据全部发送到fd上
+     */
     ssize_t n = ::write(fd, peek(), readableBytes());
     if (n < 0)
     {

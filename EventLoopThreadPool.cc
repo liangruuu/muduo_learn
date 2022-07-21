@@ -27,11 +27,12 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb)
         /**
          * 可以看到是先创建了EventLoopThread对象，这个EventLoopThread对象是基于Eventloop的线程对象，此时并没有开启eventloop
          * 就把EventLoopThread对象放入vector中，只是做了一些初始化eventloop对象之前的预备工作，例如线程封装类对象Thread的构造，
-         * 互斥锁mutex、条件变量cond_variable的预加载，并且在Thread封装类的构造函数中明确了线程函数threadFunc
+         * 互斥锁mutex、条件变量cond_variable的预加载，并且在Thread封装类的构造函数中明确了线程函数threadFunc，
+         * 在这个线程函数threadFunc中执行用户自定义的线程创建成功的回调函数ThreadInitCallback
          *
-         * 直至调用EventLoopThread对象的startloop方法，在startloop方法中执行了thread(threadFunc)方法创建了一个线程，
+         * 直至调用EventLoopThread对象的startloop方法，在startloop方法中执行了new thread(threadFunc)方法创建了一个线程，
          * 并且返回一个初始化成功的loop对象，这个loop对象包含了poller和众多的channel，
-         * 并且把初始化成功的loop放入vector中，一个thread
+         * 并且把初始化成功的loop放入vector中
          */
         EventLoopThread *t = new EventLoopThread(cb, buf);
         threads_.push_back(std::unique_ptr<EventLoopThread>(t));

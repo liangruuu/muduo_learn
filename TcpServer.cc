@@ -78,7 +78,8 @@ void TcpServer::setThreadNum(int numThreads)
  * 2. loops_.push_back(t->startLoop())
  *  t->startLoop()实现了两个主要逻辑：
  *  1. 调用了thread_.start()方法，这个start方法中实现了真正开启一个线程的逻辑：thread(threadFunc)，
- *  2. 返回了一个完成了初始化的loop对象
+ *  2. 在线程函数threadFunc中执行了loop.loop()函数，正式开启了eventloop循环，
+ *     并且返回了一个完成了初始化的loop对象
  *  因此被取名为startLoop
  *
  * EventLoopThread最关键的两个参数就是eventloop和thread，都在EventLoopThreadPool中有相应的体现

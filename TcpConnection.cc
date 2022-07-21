@@ -72,6 +72,9 @@ TcpConnection::~TcpConnection()
 
 /**
  * 用户会给TcpServer注册一个onMessage方法，表示已连接用户有读写事件的时候执行onMessage方法
+ * 这个onMessage函数会被TcpServer.setMessageCallback以及TcpConnection.setMessageCallback的形式
+ * 注册成messageCallback_,而这个messageCallback_成员函数最终会在TcpConnection中的handleRead回调函数中被调用，
+ * 也就是说当connfd发生读事件时会调用handleRead回调函数并且执行逻辑为用户自定义的onMessage函数，而这个onMessage函数中就调用了send函数
  * 我们在onMessage方法中处理完一些业务代码会send给客户端返回数据
  **/
 void TcpConnection::send(const std::string &buf)
@@ -108,7 +111,19 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
 
     /**
      * 刚开始注册的都是socket的读事件，写事件刚开始没注册
-     * outputBuffer_.readableBytes() == 0：表示channel_第一次开始写数据，而且缓冲区没有待发送数据
+     * outputBuffer_.readableBytes() == 0：表示channel_第一次开始写数据，而且写缓冲区没有待发送数据
+     *
+     *
+     * 假设一个这样的场景：
+     * 你需要将一个10G大小的文件返回给用户，那么你简单send这个文件是不会成功的。
+     * 这个场景下，你send 10G的数据，send返回值不会是10G，而是大约256k，表示你只成功写入了256k的数据。
+     * 即len=10G，nwrote=256k，接着调用send，send就会返回EAGAIN，告诉你socket的缓冲区已经满了，此时无法继续send。
+     * 此时异步程序的正确处理流程是调用epoll_wait，当socket缓冲区中的数据被对方接收之后，
+     * 缓冲区就会有空闲空间可以继续接收数据，此时epoll_wait就会返回这个socket的EPOLLOUT事件，
+     * 获得这个事件时，你就可以继续往socket中写出数据。
+     *
+     * 所以第一次写数据就只写nwrote大小的数据，如果有剩余数据则全部通过触发EPOLLOUT事件，在回调函数hanldeWrite中处理
+     * 注意：前面说的缓冲区是sockfd的内核缓冲区，不是我们定义的Buffer缓冲区
      */
     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
     {
@@ -142,7 +157,7 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
     }
 
     // 说明当前这一次write，并没有把数据全部发送出去，剩余的数据需要保存到缓冲区当中，然后给channel
-    // 注册epollout事件，poller发现tcp的发送缓冲区有空间，会通知相应的sock-channel，调用writeCallback_回调方法
+    // 注册epollout事件，LT模式下poller发现tcp的发送缓冲区有空间，会通知相应的sock-channel，调用writeCallback_回调方法
     // 也就是调用TcpConnection::handleWrite方法，把发送缓冲区中的数据全部发送完成
     if (!faultError && remaining > 0)
     {
@@ -156,7 +171,11 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
         outputBuffer_.append((char *)data + nwrote, remaining);
         if (!channel_->isWriting())
         {
-            channel_->enableWriting(); // 这里一定要注册channel的写事件，否则poller不会给channel通知epollout
+            /**
+             * 这里一定要注册channel的写事件，否则poller不会给channel通知epollout
+             * 缓冲区从满到不满，会触发EPOLLOUT事件
+             */
+            channel_->enableWriting();
         }
     }
 }
@@ -206,12 +225,32 @@ void TcpConnection::connectDestroyed()
 /**
  * TcpConnection封装了一个connfd对应的channel，通过执行channel_->setReadCallback(handleRead)
  * 以便当这个connfd注册的读事件发生之后回调这个handleRead函数
+ *
+ * 这个handleRead函数的代码隐含着一个先后关系就是只有触发了connfd的读事件才会执行handleRead回调函数，然后才会调用readFd从connfd中读取数据，
+ * 但是如果不是先从connfd读取数据又怎么会触发读事件呢？这里如果按照平常的思维就会出现一个先有鸡还是先有蛋的悖论，但是事实并不是这样。
+ * 问题的关键在于connfd触发读或者写事件的缘由并不是程序是否调用了read还是write函数，而是取决于套接字缓冲区内是否有数据。
+ * 举个例子，客户端往对应的connfd上写数据，那么该connfd的缓冲区内就会存在数据，这并不取决于服务器是否调用了read函数，即使服务器没有调用read函数，
+ * connfd的缓冲区内也会存放着从客户端传过来的数据，也即是说当调用read函数的时候，connfd缓冲区就已经
+ * 从客户端读取了数据，触发了读事件，而read函数只不过是读取connfd缓冲区内的数据，而并非是调用了read函数之后才从客户端读取数据，
+ * write函数同理，并不是说调用了write函数触发了写事件，而是write函数往缓冲区内写数据，缓冲区内有了数据才会触发写事件，如果write往别的没有被注册在epoll的地方
+ * 写数据，那么就不会触发写事件。所以事件的触发关键在于缓冲区内数据的变化，而并取决于read或者write函数的调用
+ *
+ * 缓冲区内有数据，从而导致了read操作
+ * write操作导致了缓冲区内有数据
+ *
+ * 因此对于读事件而言，read操作处于读事件被触发从而调用回调函数handleRead之后
+ * 对于写事件而言，write操作处于写事件被触发从而调用回调函数handleWrite之前
  */
 void TcpConnection::handleRead(Timestamp receiveTime)
 {
     int savedErrno = 0;
     // 这里的channel_->fd()为connfd
     ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
+    /**
+     * 如果从connfd中正常读取数据，则调用messageCallback_回调函数
+     * 而这个messageCallback_由用户通过onMessage函数自定义设置，从test_server中的相关代码来看，
+     * messageCallback_的逻辑是获取Buffer中可读区域中的数据，并且调用TcpConnection的send方法来处理这些数据
+     */
     if (n > 0)
     {
         /**
@@ -241,18 +280,29 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 }
 
 /**
- * 同理handleRead
+ * 同理handleRead，handleWrite会在confd触发写事件时被调用，主要功能是把在sendInLoop函数中未能一次性发送完的数据全部发送给connfd
+ *
+ * socket内核缓冲区每次从满到不满都会触发一次EPOLLOUT事件，每次触发EPOLLOUT事件都会调用回调函数handleWrite，
+ * 在handleWrite函数中实现了从outputBuffer_用户写缓冲区往channel_->fd()内核缓冲区写数据的操作，然后内核缓冲区内的数据
+ * 又会被用户所读取，从而导致缓冲区不满，然后触发EPOLLOUT事件，以此类推，周而复始，直至无数据可写
  */
 void TcpConnection::handleWrite()
 {
     if (channel_->isWriting())
     {
         int savedErrno = 0;
+        // 把发送缓冲区可读区域的数据全部发送到connfd中
         ssize_t n = outputBuffer_.writeFd(channel_->fd(), &savedErrno);
         if (n > 0)
         {
+            /**
+             * retrieve的作用就是使readIndex_增大，不断缩小readableBytes，扩大可写入区域大小
+             * 因为outputBuffer_.writeFd读取了写缓冲区可读区域中的数据，并且发送到connfd，所以readableBytes变少，即readIndex_增大
+             */
             outputBuffer_.retrieve(n);
-            // 发送数据完成
+            /**
+             * 发送数据完成
+             */
             if (outputBuffer_.readableBytes() == 0)
             {
                 channel_->disableWriting();

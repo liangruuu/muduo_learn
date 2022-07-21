@@ -90,7 +90,7 @@ void EventLoop::loop()
     {
         activeChannels_.clear();
         /**
-         * 监听两类fd   一种是client的fd，一种wakeupfd
+         * 监听两类fd   一种是client的connfd，一种wakeupfd
          * clientfd就是正常和客户端通信的socket链接，wakeupfd是mainloop和subloop之间通信的eventfd
          * subLoop阻塞在这一行代码上，mainLoop通过wakeupFd_唤醒阻塞的subLoop
          **/
