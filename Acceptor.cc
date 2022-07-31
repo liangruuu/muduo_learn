@@ -62,7 +62,7 @@ void Acceptor::listen()
 void Acceptor::handleRead()
 {
     InetAddress peerAddr;
-    // 完成最后一个步骤accept产生connfd，只不过这是在listenfd发生了读事件时在回调函数handleRead中实现的
+    // 完成第四步也就是最后一个步骤accept产生connfd，只不过这是在listenfd发生了读事件时在回调函数handleRead中实现的
     int connfd = acceptSocket_.accept(&peerAddr);
     if (connfd >= 0)
     {
@@ -71,6 +71,7 @@ void Acceptor::handleRead()
             /**
              * 这里的newConnectionCallback_(connfd, peerAddr)就相当于newConnection(connfd, peerAddr)
              * newConnection(connfd, peerAddr)是在TcpServer中定义并且通过acceptor设置的
+             * 具体为在TcpServer的构造函数中调用acceptor_->setNewConnectionCallback(newConnection)
              */
             newConnectionCallback_(connfd, peerAddr); // 轮询找到subLoop，唤醒，分发当前的新客户端的Channel
         }

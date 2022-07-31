@@ -1,87 +1,87 @@
 [
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Acceptor.o -c /home/liangruuu/code/mymuduo_withnotes/Acceptor.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Acceptor.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Acceptor.o -c /home/liangruuu/code/note/mymuduo_withnotes/Acceptor.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Acceptor.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Buffer.o -c /home/liangruuu/code/mymuduo_withnotes/Buffer.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Buffer.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Buffer.o -c /home/liangruuu/code/note/mymuduo_withnotes/Buffer.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Buffer.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Channel.o -c /home/liangruuu/code/mymuduo_withnotes/Channel.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Channel.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Channel.o -c /home/liangruuu/code/note/mymuduo_withnotes/Channel.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Channel.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/CurrentThread.o -c /home/liangruuu/code/mymuduo_withnotes/CurrentThread.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/CurrentThread.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/CurrentThread.o -c /home/liangruuu/code/note/mymuduo_withnotes/CurrentThread.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/CurrentThread.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/DefaultPoller.o -c /home/liangruuu/code/mymuduo_withnotes/DefaultPoller.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/DefaultPoller.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/DefaultPoller.o -c /home/liangruuu/code/note/mymuduo_withnotes/DefaultPoller.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/DefaultPoller.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EPollPoller.o -c /home/liangruuu/code/mymuduo_withnotes/EPollPoller.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/EPollPoller.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EPollPoller.o -c /home/liangruuu/code/note/mymuduo_withnotes/EPollPoller.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/EPollPoller.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoop.o -c /home/liangruuu/code/mymuduo_withnotes/EventLoop.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/EventLoop.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoop.o -c /home/liangruuu/code/note/mymuduo_withnotes/EventLoop.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/EventLoop.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoopThread.o -c /home/liangruuu/code/mymuduo_withnotes/EventLoopThread.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/EventLoopThread.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoopThread.o -c /home/liangruuu/code/note/mymuduo_withnotes/EventLoopThread.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/EventLoopThread.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoopThreadPool.o -c /home/liangruuu/code/mymuduo_withnotes/EventLoopThreadPool.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/EventLoopThreadPool.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/EventLoopThreadPool.o -c /home/liangruuu/code/note/mymuduo_withnotes/EventLoopThreadPool.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/EventLoopThreadPool.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/InetAddress.o -c /home/liangruuu/code/mymuduo_withnotes/InetAddress.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/InetAddress.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/InetAddress.o -c /home/liangruuu/code/note/mymuduo_withnotes/InetAddress.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/InetAddress.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Logger.o -c /home/liangruuu/code/mymuduo_withnotes/Logger.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Logger.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Logger.o -c /home/liangruuu/code/note/mymuduo_withnotes/Logger.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Logger.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Poller.o -c /home/liangruuu/code/mymuduo_withnotes/Poller.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Poller.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Poller.o -c /home/liangruuu/code/note/mymuduo_withnotes/Poller.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Poller.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Socket.o -c /home/liangruuu/code/mymuduo_withnotes/Socket.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Socket.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Socket.o -c /home/liangruuu/code/note/mymuduo_withnotes/Socket.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Socket.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/TcpConnection.o -c /home/liangruuu/code/mymuduo_withnotes/TcpConnection.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/TcpConnection.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/TcpConnection.o -c /home/liangruuu/code/note/mymuduo_withnotes/TcpConnection.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/TcpConnection.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/TcpServer.o -c /home/liangruuu/code/mymuduo_withnotes/TcpServer.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/TcpServer.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/TcpServer.o -c /home/liangruuu/code/note/mymuduo_withnotes/TcpServer.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/TcpServer.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Thread.o -c /home/liangruuu/code/mymuduo_withnotes/Thread.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Thread.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Thread.o -c /home/liangruuu/code/note/mymuduo_withnotes/Thread.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Thread.cc"
 },
 {
-  "directory": "/home/liangruuu/code/mymuduo_withnotes/build",
-  "command": "/usr/bin/c++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Timestamp.o -c /home/liangruuu/code/mymuduo_withnotes/Timestamp.cc",
-  "file": "/home/liangruuu/code/mymuduo_withnotes/Timestamp.cc"
+  "directory": "/home/liangruuu/code/note/mymuduo_withnotes/build",
+  "command": "/usr/bin/g++  -Dmymuduo_withnotes_EXPORTS   -g -std=c++11 -g -fPIC   -o CMakeFiles/mymuduo_withnotes.dir/Timestamp.o -c /home/liangruuu/code/note/mymuduo_withnotes/Timestamp.cc",
+  "file": "/home/liangruuu/code/note/mymuduo_withnotes/Timestamp.cc"
 }
 ]

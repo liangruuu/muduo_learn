@@ -5,6 +5,10 @@
 
 std::atomic_int Thread::numCreated_(0);
 
+/**
+ * 任何函数或者变量都区分定义和声明，
+ * 定义时不执行代码，只有声明的时候才去执行代码
+ */
 Thread::Thread(ThreadFunc func, const std::string &name)
     : started_(false),
       joined_(false),

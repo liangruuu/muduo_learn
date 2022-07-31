@@ -52,7 +52,15 @@ TcpServer::~TcpServer()
         TcpConnectionPtr conn(item.second);
         item.second.reset();
 
-        // 销毁连接
+        /**
+         * 销毁连接
+         *
+         * 因为conn->getLoop()获得的是TcpConnection的Loop，因此这里的loop对应的线程threadId_为sub线程
+         * 而~TcpServer函数的调用方TcpServer处于main线程中，因此runInLoop函数的isInLoopThread判断为false
+         * 因此需要把connectDestroyed函数存入pendingFunctors队列中来让ioLoop去执行
+         *
+         * 其实也是比较好理解的，针对每个不同的TcpConnection都需要在对应的loop线程中去执行销毁conn的操作
+         */
         conn->getLoop()->runInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
     }
 }
@@ -88,15 +96,20 @@ void TcpServer::start()
 {
     if (started_++ == 0) // 防止一个TcpServer对象被start多次
     {
-        // threadInitCallback_为线程被创建时的回调函数，并非是线程函数，两者不是一个概念
+        /**
+         * threadInitCallback_为线程被创建时的回调函数，并非是线程函数，两者不是一个概念
+         * 其跟ConnectionCallback、MessageCallback、WriteCompleteCallback同样都是由用户自定义的
+         */
         threadPool_->start(threadInitCallback_); // 启动底层的loop线程池
         /**
-         * listen&enableReadin，把acceptChannel注册到mainloop的poller上
+         * listen&enableReading，把acceptChannel注册到mainloop的poller上
+         *
          * 这个loop_是主线程的对象，所以在runInLoop函数中直接执行对应的回调函数Acceptor::listen
-         * 执行listen回调函数就是把acceptchannel注册到poller上
+         * 执行listen回调函数就是把用acceptchannel封装的listenfd注册到poller上
          * 调用完start函数，就调用loop的loop()方法开启事件循环，即poller开始运行监听acceptchannel上有没有新用户的连接
          *
-         * 因为在TcpServer的构造函数中就初始化了acceptor_对象，因此完成了第1，2步骤，所以这里就可以着手第三步的listen操作
+         * 因为在TcpServer的构造函数中就初始化了acceptor_对象，因此完成了第1，2步骤
+         * 所以这里就可以着手第三步的listen操作
          * 因为是listen操作，所以需要一个线程不断循环，所以这个listen函数被安排在一个Loop线程中执行
          **/
         loop_->runInLoop(std::bind(&Acceptor::listen, acceptor_.get()));
@@ -161,12 +174,32 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
      * 但是当前的线程是main线程，所以当前所执行的回调并不在loop所在线程
      * 随机执行queueInloop函数，通过往对应sub线程写一个数据从而唤醒该线程，
      * 并且把TcpConnection注册到subloop中
+     *
+     * runInLoop函数中isInLoopThread()判断的代码=>threadId_ == CurrentThread::tid();
+     * 因为isInLoopThread()是EventLoop对应的成员函数，所以threadId_指的是EventLoop对应的threadId_
+     * 也就是ioLoop对应的threadId_，而ioLoop又是所谓的subLoop
+     * 而CurrentThread::tid()指的是当前调用这个runInLoop函数的线程, 即TcpServer所在的线程
+     * 这里有一个技巧，判断当前线程的方法是循环判断函数的调用方
+     * 即CurrentThread::tid()的调用方是isInLoopThread()
+     * 而isInLoopThread()函数的调用方是runInLoop()函数
+     * 而runInLoop()函数的调用方，注意不是ioLoop，虽然是以ioLoop->runInLoop的形式呈现
+     * 但是runInLoop()函数的调用方是TcpServer::newConnection()，newConnection调用了ioLoop对象里的runInLoop函数
+     * 又因为TcpServer在testserver.cc中的main函数中以子类形式被调用，因此TcpServer所在的线程为main线程
+     *
+     * 因此由于mainLoop不等于subLoop，于是该connectEstablished函数将会被放入该ioLoop的pendingFunctors_集合中
+     * 这里需要注意的是pendingFunctors_是某个EventLoop对象特有的，不同的mainLoop或者subLoop所拥有的pendingFunctors_是不同的
+     * pendingFunctors_集合最终会在该ioLoop的loop循环体中被doPendingFunctors函数所调用
      **/
     ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr &conn)
 {
+    /**
+     * loop_对象在TcpServer中被定义，而TcpServer又在testserver.c中被声明，即该loop_是baseLoop，对应的线程为main线程
+     * 又因为removeConnection在TcpServer对象中被声明，因此CurThread为TcpServer对象所在线程，即main线程
+     * 所以threadId_=CurThread，因此isInLoopThread为true，调用runInLoop直接执行cb()，并不需要存入pendingFunctors队列中
+     */
     loop_->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
 }
 
@@ -177,5 +210,11 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr &conn)
 
     connections_.erase(conn->name());
     EventLoop *ioLoop = conn->getLoop();
+
+    /**
+     * 因为conn->getLoop()获得的是TcpConnection的Loop，因此这里的ioLoop对应的线程threadId_为sub线程
+     * 而removeConnectionInLoop函数的调用方TcpServer处于main线程中
+     * 因此需要把connectDestroyed函数存入pendingFunctors队列中来让ioLoop去执行
+     */
     ioLoop->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
 }

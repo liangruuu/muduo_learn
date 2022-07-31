@@ -16,6 +16,24 @@ EventLoopThreadPool::~EventLoopThreadPool()
 {
 }
 
+/**
+ * 一个线程池的启动函数做的无非就是执行若干次pthread_create也就是若干个线程的创建，
+ * 这个过程在下面也有体现，也就是EventLoopThread的相关操作，可以这么理解EventLoopThread是Thread的装饰类，
+ * EventLoopThread在Thread的基础上包装了EventLoop，但是其本质还是一个Thread线程，创建了多个线程之后便把它们放入一个集合vector中
+ *
+ * 以上是线程池的常规操作，不常规的地方在于该线程池还需要提供给用户获取EventLoop的接口，有多少个Thread就对应多少个EventLoop
+ * 因为用户本质来上说并不是在操作Thread，而是在操作EventLoop，EventLoopThread只不过是把两者结合了一下
+ * 最终还是要提供一个获取EventLoop的接口，这个接口就是getNextLoop()，只不过getNextLoop()函数跟start启动函数没有什么关系就是了
+ *
+ * 正如我们在分析std::vector<EventLoop *> loops_时候说的那样，程序需要给用户提供一个获取EventLoop对象的接口，
+ * 但前提是EventLoop对象要被提前创建好，不然用户获取的就是一个空的EventLoop对象，因此我们需要在start函数中获取多个已经被初始化
+ * 创建好了的EventLoop对象，loops_.push_back(t->startLoop())就是在做这种工作
+ *
+ * 但这里需要注意的是EventLoopThreadPool的start函数中只是把已经初始化完成的EventLoop对象汇总起来，并不实现EventLoop对象初始化操作
+ * 真正完成EventLoop对象初始化操作的地方在EventLoopThread中的startloop函数，如果更进一步的话
+ * 其实EventLoopThread中的startloop函数也并不实现EventLoop对象初始化操作，因为之前说过EventLoopThread是基于EventLoop的Thread，
+ * 因此EventLoop的初始化操作应该由Thread的线程函数来执行，也就是在EventLoopThread::threadFunc()中被实现
+ */
 void EventLoopThreadPool::start(const ThreadInitCallback &cb)
 {
     started_ = true;
@@ -46,7 +64,12 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb)
     }
 }
 
-// 如果工作在多线程中，baseLoop_默认以轮询的方式分配channel给subloop
+/**
+ * 如果工作在多线程中，baseLoop_默认以轮询的方式分配channel给subloop
+ *
+ * 为什么要提供这个接口呢？因为当server接收到http请求之后会将生成的connfd封装成channel发送给各个subLoop
+ * 而这个过程中其实就是挑选Loop并且发送的过程，挑选Loop之前则需要获取到Loop，那么getNextLoop就提供了这个功能
+ */
 EventLoop *EventLoopThreadPool::getNextLoop()
 {
     EventLoop *loop = baseLoop_;

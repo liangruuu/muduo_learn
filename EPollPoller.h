@@ -40,7 +40,11 @@ private:
      **/
     using EventList = std::vector<epoll_event>;
 
-    // epollfd_通过epoll_create来创建
+    /**
+     * epollfd_通过epoll_create来创建
+     * poller的核心就是epoll，所以每一个poller对应一个epollFd对象，因此只需要定义一个epollFd_
+     */
     int epollfd_;
+    // 一个epoll可以监听多个connfd，每个connfd都有着其对应所感兴趣的事件，所以用一个vector来保存
     EventList events_;
 };

@@ -9,7 +9,8 @@ class EventLoop;
 class InetAddress;
 
 /**
- * acceptor运行在mainloop中的mainReactor中，处理accept请求，有新用户的连接响应后就会拿到和客户端通信的connfd，
+ * acceptor运行在mainloop中的mainReactor中，其用封装了listenfd的acceptChannel处理accept请求，
+ * 如果有新用户的连接响应后就会拿到和客户端通信的connfd，
  * 并且打包成一个channel，根据muduo库默认的轮询算法找到一个subloop，把接受的channel扔给相应的subloop，
  * acceptor又会把connfd和channel打包成一个TcpConnection发送给subloop，在这之前还得唤醒相应的subloop，
  * 也就是说TcpConnection包含了一个connfd和channel，channel包含了一个connfd和event
@@ -70,7 +71,7 @@ private:
 
     /**
      * 如果Acceptor返回了一个listenfd，也就是说有一个客户端连接成功了
-     * Tcpserver接下来就应该通过轮询选择一个subloop唤醒，并把mainloop中获取的listenfd打包成channel
+     * Tcpserver接下来就应该通过轮询选择一个subloop唤醒，并把mainloop中获取的connfd打包成channel
      * 扔给subloop，从而让poller去监听已连接fd的读写事件，以上操作就由NewConnectionCallback函数执行
      *
      * 注意这里是NewConnectionCallback，不是TcpConnection中的ConnectionCallback，两者相差了一个New

@@ -26,6 +26,10 @@ int createEventfd()
     return evtfd;
 }
 
+/**
+ * EventLoop的构造函数参数全为默认值，也就是说可以直接通过 EventLoop loop
+ * 创建一个EventLoop对象而不用传入任何参数
+ */
 EventLoop::EventLoop()
     : looping_(false),
       quit_(false),
@@ -93,11 +97,20 @@ void EventLoop::loop()
          * 监听两类fd   一种是client的connfd，一种wakeupfd
          * clientfd就是正常和客户端通信的socket链接，wakeupfd是mainloop和subloop之间通信的eventfd
          * subLoop阻塞在这一行代码上，mainLoop通过wakeupFd_唤醒阻塞的subLoop
+         *
+         * activeChannels_是所有被epoll监听所发生了相应事件的fd相对应封装成的channel所构成的集合
          **/
         pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
         for (Channel *channel : activeChannels_)
         {
-            // Poller监听哪些channel发生事件了，然后上报给EventLoop，通知channel处理相应的事件
+            /**
+             * Poller监听哪些channel发生事件了，然后上报给EventLoop，通知channel处理相应的事件
+             *
+             * 针对所有channel，因为channel对应的fd上发生了事件，所以需要执行封装在对应channel上的回调函数
+             * handleEvent()函数的主要逻辑就是针对不同fd对应的revents不同而执行相应的回调函数，
+             * 比如发生了写事件的fd，即revents对应的值为EPOLLOUT，则执行handleWrite函数
+             * 发生了读事件的fd，即revents对应的值为EPOLLIN，则执行handleRead函数，以此类推
+             */
             channel->handleEvent(pollReturnTime_);
         }
 
@@ -143,10 +156,62 @@ void EventLoop::quit()
     }
 }
 
-// 在当前loop中执行cb
+/**
+ * 在当前loop中执行cb
+ *
+ * 在讲解消息的发送过程时候，我们讲到为了保证对 buffer 和 socket 的写动作是在 IO 线程中进行
+ * 使用了一个 runInLoop 函数，将该写任务抛给了 IO 线程处理。
+ *
+ * runInLoop函数见名知意，该函数希望让一个回调函数cb在一个EventLoop中被执行
+ * 这个回调函数不等同于handleXXX系列函数，handleXXX函数在channel中被定义，在fd发生事件被epoll
+ * 所监听到之后才会执行，这个cb函数则没有这个限制，它最终会在EventLoop循环期间在某个时刻被调用
+ * 至于是什么时候取决于代码逻辑
+ *
+ * 任何一个线程，只要创建并运行了EventLoop，都称之为IO线程
+ * runInLoop()使得IO线程能够执行某个用户任务回调
+ * 如果用户在当前IO线程调用这个函数，回调会同步进行
+ * 如果用户在其他线程调用runInLoop()，回调函数会加入到队列中，IO线程会被唤醒来调用这个函数
+ * 这样就能够轻易地在线程间调配任务，比如将回调函数都移到IO线程中执行，就可以在不使用锁的情况下保证线程安全
+ *
+ * 示例中，EventLoopThread类封装了IO线程
+ * EventLoopThread创建了一个线程，在线程函数中创建了一个EvenLoop对象并调用EventLoop::loop
+ * 在主线程调用runInLoop,即将runInThread添加到loop对象所在IO线程，让该IO线程执行
+ *
+ * void runInThread()
+ * {
+ *  printf("runInThread(): pid = %d, tid = %d\n",
+ *         getpid(), CurrentThread::tid());
+ * }
+
+ * int main()
+ * {
+ *     printf("main(): pid = %d, tid = %d\n",
+ *            getpid(), CurrentThread::tid());
+ *
+ *     EventLoopThread loopThread;
+ *     EventLoop *loop = loopThread.startLoop();
+ *     // 异步调用runInThread，即将runInThread添加到loop对象所在IO线程，让该IO线程执行
+ *     loop->runInLoop(runInThread);
+ *     sleep(1);
+ *
+ *     printf("exit main().\n");
+ * }
+ *
+ * 输出：
+ * main(): pid = 1074, tid = 1074
+ * runInThread(): pid = 1074, tid = 1075
+ *
+ * 也就是说通过EventLoopThread获得的loop对象是处于另外一个线程中的
+ * 其调用runInLoop函数也是在另外一个线程中去执行的，因为创建loop对象的过程中创建了新的线程
+ * 并且该loop也是在这个新线程的线程函数中产生并且返回的
+ * 两个printf语句一个在main线程中被执行，一个在子线程中被执行
+ * 在主线程中调用loop对象的runInLoop方法，则runInLoop函数中的isInLoopThread()判断
+ * threadId_为调用runInLoop函数的loop对象，而CurThread则为mainLoop
+ */
 void EventLoop::runInLoop(Functor cb)
 {
-    if (isInLoopThread()) // 在当前的loop线程中，执行cb
+    // 如果调用时是此 EventLoop 的运行线程，则直接执行此cb函数。
+    if (isInLoopThread())
     {
         cb();
     }
@@ -164,8 +229,14 @@ void EventLoop::queueInLoop(Functor cb)
         pendingFunctors_.emplace_back(cb);
     }
 
-    // 唤醒相应的，需要执行上面回调操作的loop的线程了
-    // || callingPendingFunctors_的意思是：当前loop正在执行回调，但是loop又有了新的回调
+    /**
+     * 唤醒相应的，需要执行上面回调操作的loop的线程了
+     * || callingPendingFunctors_的意思是：当前loop正在执行回调，但是loop又有了新的回调
+     *
+     * 因为虽然EaventLoop对应的pendingFunctors_待执行函数队列中有函数需要被执行
+     * 但是此时的EventLoop正在被loop循环，即epoll.wait函数所阻塞
+     * 因此需要唤醒阻塞从而让loop所在线程去执行这些放在pendingFunctors_队列中的函数
+     */
     if (!isInLoopThread() || callingPendingFunctors_)
     {
         wakeup(); // 唤醒loop所在线程

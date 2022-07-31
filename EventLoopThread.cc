@@ -6,6 +6,7 @@ EventLoopThread::EventLoopThread(const ThreadInitCallback &cb,
     : loop_(nullptr),
       exiting_(false),
       // 调用Thread的构造函数，把EventLoopThread中默认的threadFunc函数作为线程函数
+      // 因为EventLoopThread是基于Thread的，所以构造函数中更需要包含对Thread的初始化
       thread_(std::bind(&EventLoopThread::threadFunc, this), name),
       mutex_(),
       cond_(),
@@ -27,6 +28,14 @@ EventLoopThread::~EventLoopThread()
 /**
  * thread_.start()函数会启动一个线程，并且执行预先设置的线程函数threadFunc，
  * threadFunc最终会调用EventLoop.loop函数从而开启一个eventloop
+ *
+ * threadFunc函数中的loop.loop();是在startLoop被执行之后才去执行的，
+ * 因为threadFunc是一个线程函数，必须得等到线程被创建时采取执行，而在这个程序中调用pthread_create
+ * 创建线程是在thread_.start();中被执行的，所以startLoop函数是在线程被创建之前执行的，也就是在
+ * threadFunc函数执行前被执行的，换句话说是程序调用了startLoop函数才开启了loop.loop();循环
+ *
+ * 该函数虽然是以startLoop(开启Loop循环)为名，但是函数中并没有直接体现出与Loop相关的操作，
+ * 而是把Loop相关的操作放入线程函数中
  */
 EventLoop *EventLoopThread::startLoop()
 {
@@ -53,10 +62,23 @@ EventLoop *EventLoopThread::startLoop()
     return loop;
 }
 
-// 下面这个方法，是在单独的新线程里面运行的
+/**
+ * 下面这个方法，是在单独的新线程里面运行的
+ *
+ * 线程函数代表了一个线程主要执行的操作，是线程的核心逻辑所在
+ * 那么既然线程被取名为EventLoopThread，那么这个线程的核心逻辑就和EventLoop相关，
+ * 因此threadFunc线程函数中应该包含EventLoop相关的代码，那么与EventLoop相关的代码就应该是loop循环了，
+ * 所以我们应该自然而然想到在线程函数中调用 loop.loop();
+ */
 void EventLoopThread::threadFunc()
 {
-    EventLoop loop; // 创建一个独立的eventloop，和上面的线程是一一对应的，one loop per thread
+    /**
+     * 创建一个独立的eventloop，和上面的线程是一一对应的，one loop per thread
+     *
+     * CPU创建一个线程并且执行其线程函数，在线程函数中创建一个EventLoop对象并且调用其构造函数
+     * 因为CPU正在运行当前线程，所以在构造函数中对EventLoop对象的threadId_变量赋予当前线程ID->CurrentThread::tid()
+     */
+    EventLoop loop;
 
     // ThreadInitCallback callback_;
     if (callback_)

@@ -81,6 +81,16 @@ void TcpConnection::send(const std::string &buf)
 {
     if (state_ == kConnected)
     {
+        /**
+         * 这里调用了runInLoop函数，所以来分析一下isInLoopThread中的threadId_和CurThread都是什么线程？
+         * 这里的loop_是TcpConnection对应的EventLoop，而TcpConnection对象又是在TcpServer对象的newConnection函数中声明的
+         * TcpServer在创建TcpConnection对象时传入了ioLoop作为TcpConnection对象的loop变量
+         * 而ioLoop又是通过threadPool_->getNextLoop();获取的，即TcpConnection对象中的loop_对应的是subLoop
+         * 而又因为CurThread我们在TcpServer.c文件中分析过，即循环判断函数的调用方
+         * 即谁调用了send函数，那么send函数就属于对应调用方的线程，因为send函数在test_server.c中的onMessage函数中被调用
+         * 而该调用方属于main线程，所以CurThread为mainThread，一个线程是subThread，一个线程是mainThread
+         * 因此loop_->isInLoopThread()的调用结果为false，最后会把sendInLoop函数放入loop_对应的pendingFunctors队列中等待被该subLoop执行
+         */
         if (loop_->isInLoopThread())
         {
             sendInLoop(buf.c_str(), buf.size());
@@ -93,7 +103,7 @@ void TcpConnection::send(const std::string &buf)
 }
 
 /**
- * 发送数据  应用写的快， 而内核发送数据慢， 需要把待发送数据写入缓冲区， 而且设置了水位回调
+ * 发送数据  应用写的快，而内核发送数据慢，需要把待发送数据写入缓冲区，而且设置了水位回调
  */
 void TcpConnection::sendInLoop(const void *data, size_t len)
 {
@@ -138,6 +148,10 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
                 /**
                  * 既然在这里数据全部发送完成，就不用再给channel设置epollout事件
                  * 从而去执行handleWrite回调函数
+                 *
+                 * 其实我们在send函数中就已经分析过
+                 * 此处的threadId_和CurThread是两个不同的线程，因此既然是不同的两个线程那就需要执行queueInLoop
+                 * 把writeCompleteCallback_回调函数放入subThread对应的pendingFunctors队列等待subThread去执行
                  **/
                 loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
             }
@@ -163,8 +177,18 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
     {
         // 目前发送缓冲区剩余的待发送数据的长度
         size_t oldLen = outputBuffer_.readableBytes();
+
+        /**
+         * 如果此时OutputBuffer中的旧数据的个数和未写完字节个数之和大于highWaterMark
+         * 则将highWaterMarkCallback放入待执行队列中
+         */
         if (oldLen + remaining >= highWaterMark_ && oldLen < highWaterMark_ && highWaterMarkCallback_)
         {
+            /**
+             * 其实我们在send函数中就已经分析过
+             * 此处的threadId_和CurThread是两个不同的线程，因此既然是不同的两个线程那就需要执行queueInLoop
+             * 把highWaterMarkCallback_回调函数放入subThread对应的pendingFunctors队列等待subThread去执行
+             **/
             loop_->queueInLoop(
                 std::bind(highWaterMarkCallback_, shared_from_this(), oldLen + remaining));
         }
@@ -172,7 +196,7 @@ void TcpConnection::sendInLoop(const void *data, size_t len)
         if (!channel_->isWriting())
         {
             /**
-             * 这里一定要注册channel的写事件，否则poller不会给channel通知epollout
+             * 这里一定要将对应socket的可写事件注册到EventLoop中，否则poller不会给channel通知epollout
              * 缓冲区从满到不满，会触发EPOLLOUT事件
              */
             channel_->enableWriting();
@@ -186,6 +210,11 @@ void TcpConnection::shutdown()
     if (state_ == kConnected)
     {
         setState(kDisconnecting);
+        /**
+         * loop_为subLoop，所以threadId_为subThread
+         * CurThread为shutdown函数调用方所在线程，而shutdown在testserver.c中的onMessage回调函数中被调用，即在main线程中被调用
+         * 因此threadId_!=CurThread，所以loop_->runInLoop最终会把shutdownInLoop函数放入loop_对应的pendingFunctors队列中
+         */
         loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
     }
 }
@@ -300,8 +329,20 @@ void TcpConnection::handleWrite()
              * 因为outputBuffer_.writeFd读取了写缓冲区可读区域中的数据，并且发送到connfd，所以readableBytes变少，即readIndex_增大
              */
             outputBuffer_.retrieve(n);
+
             /**
-             * 发送数据完成
+             * 发送数据完成, 此时的OutputBuffer没有剩余
+             * 则将该socket的可写事件移除.并调用 writeCompleteCallback
+             *
+             * 为什么要移除可写事件？
+             * 因为当OutputBuffer中没数据时，我们不需要向socket中写入数据
+             * 但是此时socket一直是处于可写状态的，这将会导致TcpConnection::handleWrite()一直被触发
+             * 然而这个触发毫无意义，因为并没有什么可以写的
+             *
+             * 所以muduo的处理方式是，当OutputBuffer还有数据时，socket可写事件是注册状态
+             * 当OutputBuffer为空时，则将socket的可写事件移除
+             *
+             * 此外，highWaterMarkCallback和writeCompleteCallback一般配合使用，起到限流的作用
              */
             if (outputBuffer_.readableBytes() == 0)
             {
@@ -309,7 +350,13 @@ void TcpConnection::handleWrite()
                 // 与handleRead函数中的messageCallback_赋值原理是相同的
                 if (writeCompleteCallback_)
                 {
-                    // 唤醒loop_对应的thread线程，执行回调
+                    /**
+                     * 唤醒loop_对应的thread线程，执行回调
+                     *
+                     * 其实我们在send函数中就已经分析过
+                     * 此处的threadId_和CurThread是两个不同的线程，因此既然是不同的两个线程那就需要执行queueInLoop
+                     * 把writeCompleteCallback_回调函数放入subThread对应的pendingFunctors队列等待subThread去执行
+                     **/
                     loop_->queueInLoop(
                         std::bind(writeCompleteCallback_, shared_from_this()));
                 }
@@ -330,7 +377,22 @@ void TcpConnection::handleWrite()
     }
 }
 
-// poller => channel::closeCallback => TcpConnection::handleClose
+/**
+ * poller => channel::closeCallback => TcpConnection::handleClose
+ *
+ * 连接的断开
+ * 连接的断开分为被动断开和主动断开。主动断开和被动断开的处理方式基本一致
+ * 被动断开即客户端断开了连接，server 端需要感知到这个断开的过程，然后进行的相关的处理。
+ *
+ * 其中感知远程断开这一步是在 Tcp 连接的可读事件处理函数 handleRead 中进行的
+ * 当对 socket 进行 read 操作时，返回值为 0，则说明此时连接已断开
+ *
+ * 接下来会做四件事情：
+ * 1. 将该 TCP 连接对应的事件从 EventLoop 移除
+ * 2. 调用用户的ConnectionCallback
+ * 3. 将对应的TcpConnection对象从 Server 移除。
+ * 4. close对应的fd。此步骤是在析构函数中自动触发的，当TcpConnection对象被移除后，引用计数为0，对象析构时会调用close。
+ */
 void TcpConnection::handleClose()
 {
     LOG_INFO("TcpConnection::handleClose fd=%d state=%d \n", channel_->fd(), (int)state_);

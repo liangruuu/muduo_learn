@@ -56,9 +56,16 @@ int main()
 {
     EventLoop loop;
     InetAddress addr(8000);
-    EchoServer server(&loop, addr, "EchoServer-01"); // Acceptor non-blocking listenfd  create bind
-    server.start();                                  // listen  loopthread  listenfd => acceptChannel => mainLoop =>
-    loop.loop();                                     // 启动mainLoop的底层Poller
+    // Acceptor non-blocking listenfd  create bind
+    EchoServer server(&loop, addr, "EchoServer-01");
+    // listen  loopthread  listenfd => acceptChannel => mainLoop =>
+    server.start();
+    /**
+     * 启动mainLoop的底层Poller
+     * subLoop的loop函数将在EventLoopThread中定义的线程函数threadFunc中开启，
+     * 即启动一个线程就开启一个EventLoop
+     */
+    loop.loop();
 
     return 0;
 }
