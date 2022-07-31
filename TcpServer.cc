@@ -111,6 +111,10 @@ void TcpServer::start()
          * 因为在TcpServer的构造函数中就初始化了acceptor_对象，因此完成了第1，2步骤
          * 所以这里就可以着手第三步的listen操作
          * 因为是listen操作，所以需要一个线程不断循环，所以这个listen函数被安排在一个Loop线程中执行
+         *
+         * 这里的loop_是TcpServer成员变量，而TcpServer对象又是在main线程中定义的，因此该loops_是属于main线程的
+         * 又因为该runInLoop函数处于start函数中，而调用start函数的地方在testserver.c中，即main线程中调用
+         * 所以isInLoopThread()为true，即直接执行cb()
          **/
         loop_->runInLoop(std::bind(&Acceptor::listen, acceptor_.get()));
     }

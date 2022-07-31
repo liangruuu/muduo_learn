@@ -19,6 +19,11 @@ static int createNonblocking()
 }
 
 Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr, bool reuseport)
+    /**
+     * 这个loop其实就是从TcpServer中传过来的，而TcpServer中的loop是在tesrserver中设置的
+     * 也就是说这个loop是mainLoop，本来Acceptor就是mainLoop特有的用来处理连接请求的
+     * 是其他subLoop所不具有的，其他subLoop处理的是IO请求
+     */
     : loop_(loop),
       acceptSocket_(createNonblocking()),
       // 只要是可能发生事件的东西都会被封装成channel，Acceptor会发生读事件，因为网络请求就是读写的过程，所以被封转成channel
@@ -35,6 +40,10 @@ Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr, bool reusepor
      *
      * baseLoop =>poller监听到 acceptChannel_(listenfd)有事件发生=>acceptChannel调用相应的callback函数
      * callback函数事先已经设置为Acceptor::handleRead
+     *
+     * 因为acceptChannel_封装的是listenfd，所以如果listenfd触发了读事件，原因是有客户端请求了服务器连接
+     * 既然有客户端请求了服务器，那么就需要处理这个http请求
+     * 那么理所应当的回调函数执行操作的逻辑是通过accept产生connfd
      **/
     acceptChannel_.setReadCallback(std::bind(&Acceptor::handleRead, this));
 }

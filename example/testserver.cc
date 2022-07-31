@@ -21,6 +21,10 @@ public:
         // 设置合适的loop线程数量 loopthread
         server_.setThreadNum(3);
     }
+
+    /**
+     * TcpServer.start意味着开启处于mainLoop中的成员变量Acceptor的listen监听
+     */
     void start()
     {
         server_.start();
@@ -57,11 +61,12 @@ int main()
     EventLoop loop;
     InetAddress addr(8000);
     // Acceptor non-blocking listenfd  create bind
+    // 对于TcpServer的初始化操作，只有进行了初始化才能继续接下来的start操作
     EchoServer server(&loop, addr, "EchoServer-01");
     // listen  loopthread  listenfd => acceptChannel => mainLoop =>
     server.start();
     /**
-     * 启动mainLoop的底层Poller
+     * 通过loop.loop()启动mainLoop的底层Poller，这是main线程的Loop
      * subLoop的loop函数将在EventLoopThread中定义的线程函数threadFunc中开启，
      * 即启动一个线程就开启一个EventLoop
      */

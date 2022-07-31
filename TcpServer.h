@@ -40,6 +40,29 @@ public:
         }
      * 因为这个callback_有一个loop参数，所以ThreadInitCallback也是一个以EventLoop为形参的函数
      *
+     * TcpServer是其他所有muduo组件的"中介站"
+     * 类似于ThreadInitCallback、ConnectionCallback、MessageCallback...等回调函数的主要逻辑处理地方不在TcpServer，
+     * 而是在TcpConnection、EventLoopThreadPool等地
+     *
+     * 比如ThreadInitCallback线程初始化回调函数将会直接由EventLoopThread操作
+     * 再比如MessageCallback读写消息回调函数将会直接由TcpConnection操作
+     * TcpServer只是起到了一个把客户设置的回调函数间接地传给了这些直接操作相关回调函数组件的功能
+     * 即客户端->(设置函数)->TcpServer->(设置函数)->相关组件
+     *
+     * 因此除了在特定的组件内定义相关函数变量，也必须要在TcpServer内定义相应的函数变量用于承接来自客户端的传参
+     * 并且把这些函数参数再次设置给其余组件
+     *
+     * ThreadInitCallback
+     * :客户端->TcpServer->EventLoopThreadPool->EventLoopThread
+     *
+     * ConnectionCallback
+     * :客户端->TcpServer->TcpConnection
+     *
+     * MessageCallback
+     * :客户端->TcpServer->TcpConnection
+     *
+     * WriteCompleteCallback
+     * :客户端->TcpServer->TcpConnection
      **/
     using ThreadInitCallback = std::function<void(EventLoop *)>;
 
@@ -85,6 +108,15 @@ private:
 
     using ConnectionMap = std::unordered_map<std::string, TcpConnectionPtr>;
 
+    /**
+     * TcpServer作为用户和服务器的直接桥梁，拥有很多重要的参数
+     * 1. EventLoop *loop_: 根据one loop per thread的思想，TcpServer运行在main线程上
+     * 因此需要有一个配套的mainLoop来运行循环，这个mainLoop的主要作用就是listen来自客户端的连接请求
+     * 2. Acceptor acceptor_: 接收来自客户端的连接请求的组件
+     * 3. ConnectionCallback、MessageCallback等多个回调函数
+     * 4. TcpConnection: 每个来自客户端的请求都会在TcpServer中被封装成TcpConnection从而发送给subLoop进行处理
+     * 5. EventLoopThreadPool threadPool_: TcpServer操作线程池去创建线程以便运行多个subLoop
+     */
     EventLoop *loop_; // baseLoop 用户定义的loop
 
     const std::string ipPort_;
