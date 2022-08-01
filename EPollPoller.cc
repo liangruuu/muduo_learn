@@ -45,6 +45,21 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels) {
      * 我们装event的数组用的是vector，所以我们需要拿到vector底层数组的起始地址
      *
      * epoll操作的第二步：epoll_wait，阻塞线程让epoll对象监听注册fd感兴趣的事件发生
+     *
+     *
+     * ！！！这里需要明确的一点是：epoll_wait的调用并不会导致线程阻塞
+     * 也就是说当执行到这一行代码的时候并不会等待被epoll所监听的文件描述符发生事件
+     * epoll_wait的作用不是去阻塞等待若干fd发生事件，而是如果fd发生了事件则把这些fd放入events数组中
+     * 如果当前没有注册在epoll对象上的fd发生事件，它也不会去阻塞线程等待fd事件的发生，那么numEvents就会为0
+     *
+     * epoll_wait是在poll函数中被调用的，而poll函数又是在EventLoop对象的loop函数中执行的
+     * 而poll函数又处在一个loop函数的一个while循环中，也就是说某一次调用epoll_wait到因为while循环再次调用loop函数
+     * 从而再次调用poll函数，以至于再次调用epoll_wait之前这一段时间之内
+     * 如果有注册在epoll上的fd发生了感兴趣的事件，那么在第二次调用epoll_wait函数的时候就会被记录下来
+     *
+     * epoll_wait不是通过阻塞等待fd发生事件，而是通过一种non-blocking的方式在循环中不断地查询是否有fd发生了事件
+     * 调用一次epoll_wait，不管有没有事件发生，有的话numEvents就大于0，没有的话numEvents就等于0，都是可以的
+     *
      **/
     int numEvents = ::epoll_wait(epollfd_, &*events_.begin(),
                                  static_cast<int>(events_.size()), timeoutMs);
