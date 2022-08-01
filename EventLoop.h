@@ -1,14 +1,14 @@
 #pragma once
 
-#include <functional>
-#include <vector>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <mutex>
+#include <vector>
 
-#include "noncopyable.h"
-#include "Timestamp.h"
 #include "CurrentThread.h"
+#include "Timestamp.h"
+#include "noncopyable.h"
 
 class Channel;
 class Poller;
@@ -36,9 +36,8 @@ class Poller;
  *
  *
  **/
-class EventLoop : noncopyable
-{
-public:
+class EventLoop : noncopyable {
+   public:
     using Functor = std::function<void()>;
 
     EventLoop();
@@ -67,9 +66,9 @@ public:
     // 判断EventLoop对象是否在自己的线程里面
     bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
 
-private:
-    void handleRead();        // wake up
-    void doPendingFunctors(); // 执行回调
+   private:
+    void handleRead();         // wake up
+    void doPendingFunctors();  // 执行回调
 
     using ChannelList = std::vector<Channel *>;
 
@@ -78,7 +77,7 @@ private:
      * 原子操作，通过CAS实现的
      **/
     std::atomic_bool looping_;
-    std::atomic_bool quit_; // 标识退出loop循环
+    std::atomic_bool quit_;  // 标识退出loop循环
 
     /**
      * 记录当前loop所在线程的id
@@ -90,7 +89,7 @@ private:
      **/
     const pid_t threadId_;
 
-    Timestamp pollReturnTime_; // poller返回发生事件的channels的时间点
+    Timestamp pollReturnTime_;  // poller返回发生事件的channels的时间点
     std::unique_ptr<Poller> poller_;
 
     /**
@@ -99,8 +98,9 @@ private:
      * 得到了表示这个新用户链接的fd和其感兴趣事件对应的channel的话，该如何把这个channel传递给subReactor，
      * 因为这些subReactor都处于阻塞状态，所以应该考虑如何把其唤醒
      * 在muduo中使用了linux内核提供的eventfd函数
-     *  eventfd()  creates an "eventfd object" that can be used as an event wait/notify mechanism by user-space appli‐
-     *  cations, and by the kernel to notify user-space applications of  events.
+     *  eventfd()  creates an "eventfd object" that can be used as an event
+     *wait/notify mechanism by user-space appli‐ cations, and by the kernel to
+     *notify user-space applications of  events.
      * 其中的wait/notify意味着这个函数提供了线程间的通信机制，可以唤醒其他线程
      *
      * 主要作用，当mainLoop获取一个新用户的channel，通过轮询算法选择一个subloop，通过该成员唤醒subloop处理channel
@@ -123,7 +123,8 @@ private:
     // 一个EventLoop包含一个Poller，一个Poller包含多个Channel，所以一个EventLoop包含多个channel
     ChannelList activeChannels_;
 
-    std::atomic_bool callingPendingFunctors_; // 标识当前loop是否有需要执行的回调操作
-    std::vector<Functor> pendingFunctors_;    // 存储loop需要执行的所有的回调操作
-    std::mutex mutex_;                        // 互斥锁，用来保护上面vector容器的线程安全操作
+    std::atomic_bool
+        callingPendingFunctors_;  // 标识当前loop是否有需要执行的回调操作
+    std::vector<Functor> pendingFunctors_;  // 存储loop需要执行的所有的回调操作
+    std::mutex mutex_;  // 互斥锁，用来保护上面vector容器的线程安全操作
 };

@@ -1,17 +1,16 @@
 #pragma once
-#include "noncopyable.h"
-
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
+
+#include "noncopyable.h"
 
 class EventLoop;
 class EventLoopThread;
 
-class EventLoopThreadPool : noncopyable
-{
-public:
+class EventLoopThreadPool : noncopyable {
+   public:
     using ThreadInitCallback = std::function<void(EventLoop *)>;
 
     EventLoopThreadPool(EventLoop *baseLoop, const std::string &nameArg);
@@ -30,7 +29,7 @@ public:
     bool started() const { return started_; }
     const std::string name() const { return name_; }
 
-private:
+   private:
     /**
      * EventLoop loop;
      * 如果不通过TcpServer的setThreadNumber函数设置底层线程数量的话，那么muduo库就采用的是单线程模型

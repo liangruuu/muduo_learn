@@ -1,19 +1,18 @@
 #pragma once
 
-#include "noncopyable.h"
-#include "Thread.h"
-
+#include <condition_variable>
 #include <functional>
 #include <mutex>
-#include <condition_variable>
 #include <string>
+
+#include "Thread.h"
+#include "noncopyable.h"
 
 class EventLoop;
 
 // 绑定一个eventloop运行在thread上
-class EventLoopThread : noncopyable
-{
-public:
+class EventLoopThread : noncopyable {
+   public:
     using ThreadInitCallback = std::function<void(EventLoop *)>;
 
     EventLoopThread(const ThreadInitCallback &cb = ThreadInitCallback(),
@@ -22,7 +21,7 @@ public:
 
     EventLoop *startLoop();
 
-private:
+   private:
     void threadFunc();
 
     EventLoop *loop_;

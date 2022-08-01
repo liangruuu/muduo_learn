@@ -17,13 +17,12 @@
  * 无法进行拷贝构造和赋值操作
  */
 
-class noncopyable
-{
-public:
+class noncopyable {
+   public:
     noncopyable(const noncopyable &) = delete;
     noncopyable &operator=(const noncopyable &) = delete;
 
-protected:
+   protected:
     noncopyable() = default;
     ~noncopyable() = default;
 };

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "Poller.h"
-#include "Timestamp.h"
+#include <sys/epoll.h>
 
 #include <vector>
-#include <sys/epoll.h>
+
+#include "Poller.h"
+#include "Timestamp.h"
 
 class Channel;
 
@@ -14,9 +15,8 @@ class Channel;
  * epoll_ctl   add/mod/del  =》 updateChannel、removeChannel
  * epoll_wait   =》 poll
  */
-class EPollPoller : public Poller
-{
-public:
+class EPollPoller : public Poller {
+   public:
     EPollPoller(EventLoop *loop);
     ~EPollPoller() override;
 
@@ -25,7 +25,7 @@ public:
     void updateChannel(Channel *channel) override;
     void removeChannel(Channel *channel) override;
 
-private:
+   private:
     // EventList初始的长度
     static const int kInitEventListSize = 16;
 

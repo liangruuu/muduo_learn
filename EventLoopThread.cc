@@ -1,4 +1,5 @@
 #include "EventLoopThread.h"
+
 #include "EventLoop.h"
 
 EventLoopThread::EventLoopThread(const ThreadInitCallback &cb,
@@ -11,15 +12,11 @@ EventLoopThread::EventLoopThread(const ThreadInitCallback &cb,
       mutex_(),
       cond_(),
       // threadFunc是线程函数，callback_是线程被创建时的回调函数，两者不是一个概念
-      callback_(cb)
-{
-}
+      callback_(cb) {}
 
-EventLoopThread::~EventLoopThread()
-{
+EventLoopThread::~EventLoopThread() {
     exiting_ = true;
-    if (loop_ != nullptr)
-    {
+    if (loop_ != nullptr) {
         loop_->quit();
         thread_.join();
     }
@@ -37,9 +34,9 @@ EventLoopThread::~EventLoopThread()
  * 该函数虽然是以startLoop(开启Loop循环)为名，但是函数中并没有直接体现出与Loop相关的操作，
  * 而是把Loop相关的操作放入线程函数中
  */
-EventLoop *EventLoopThread::startLoop()
-{
-    thread_.start(); // 启动底层的新线程，执行的是func_函数，也就是EventLoopThread::threadFunc
+EventLoop *EventLoopThread::startLoop() {
+    thread_
+        .start();  // 启动底层的新线程，执行的是func_函数，也就是EventLoopThread::threadFunc
 
     /**
      * 当我们去执行startLoop的时候，下面的这段代码是一个线程，thread_.start()开启了另一个线程
@@ -53,8 +50,7 @@ EventLoop *EventLoopThread::startLoop()
     EventLoop *loop = nullptr;
     {
         std::unique_lock<std::mutex> lock(mutex_);
-        while (loop_ == nullptr)
-        {
+        while (loop_ == nullptr) {
             cond_.wait(lock);
         }
         loop = loop_;
@@ -70,8 +66,7 @@ EventLoop *EventLoopThread::startLoop()
  * 因此threadFunc线程函数中应该包含EventLoop相关的代码，那么与EventLoop相关的代码就应该是loop循环了，
  * 所以我们应该自然而然想到在线程函数中调用 loop.loop();
  */
-void EventLoopThread::threadFunc()
-{
+void EventLoopThread::threadFunc() {
     /**
      * 创建一个独立的eventloop，和上面的线程是一一对应的，one loop per thread
      *
@@ -81,8 +76,7 @@ void EventLoopThread::threadFunc()
     EventLoop loop;
 
     // ThreadInitCallback callback_;
-    if (callback_)
-    {
+    if (callback_) {
         callback_(&loop);
     }
 
@@ -93,7 +87,7 @@ void EventLoopThread::threadFunc()
     }
 
     // 运行loop开启底层Poller的poll方法，而从进入阻塞状态监听远端用户的连接或者已连接用户的读写事件
-    loop.loop(); // EventLoop loop  => Poller.poll
+    loop.loop();  // EventLoop loop  => Poller.poll
     std::unique_lock<std::mutex> lock(mutex_);
     loop_ = nullptr;
 }

@@ -1,20 +1,21 @@
 #pragma once
 
+#include <unistd.h>
+
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+
 #include "noncopyable.h"
 
-#include <functional>
-#include <thread>
-#include <memory>
-#include <unistd.h>
-#include <string>
-#include <atomic>
-
 /**
- * EventLoop包括其底层的Poller不会只工作在一个线程上，其是one loop per thread：一个线程对应一个loop，
+ * EventLoop包括其底层的Poller不会只工作在一个线程上，其是one loop per
+ *thread：一个线程对应一个loop，
  **/
-class Thread : noncopyable
-{
-public:
+class Thread : noncopyable {
+   public:
     /**
      * 线程函数
      * 这里的线程函数是默认的无参函数，如果想要设置有参函数，则可以使用绑定器bind构造成一个无参函数形式
@@ -33,7 +34,7 @@ public:
 
     static int numCreated() { return numCreated_; }
 
-private:
+   private:
     void setDefaultName();
 
     bool started_;

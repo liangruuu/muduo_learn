@@ -5,13 +5,9 @@
 class InetAddress;
 
 // 封装socket fd
-class Socket : noncopyable
-{
-public:
-    explicit Socket(int sockfd)
-        : sockfd_(sockfd)
-    {
-    }
+class Socket : noncopyable {
+   public:
+    explicit Socket(int sockfd) : sockfd_(sockfd) {}
 
     ~Socket();
 
@@ -29,6 +25,6 @@ public:
     void setReusePort(bool on);
     void setKeepAlive(bool on);
 
-private:
+   private:
     const int sockfd_;
 };

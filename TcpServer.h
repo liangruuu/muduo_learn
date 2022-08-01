@@ -3,20 +3,20 @@
 /**
  * 用户使用muduo编写服务器程序
  */
-#include "EventLoop.h"
-#include "Acceptor.h"
-#include "InetAddress.h"
-#include "noncopyable.h"
-#include "EventLoopThreadPool.h"
-#include "Callbacks.h"
-#include "TcpConnection.h"
-#include "Buffer.h"
-
-#include <functional>
-#include <string>
-#include <memory>
 #include <atomic>
+#include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
+
+#include "Acceptor.h"
+#include "Buffer.h"
+#include "Callbacks.h"
+#include "EventLoop.h"
+#include "EventLoopThreadPool.h"
+#include "InetAddress.h"
+#include "TcpConnection.h"
+#include "noncopyable.h"
 
 /**
  * 对外的服务器编程使用的类
@@ -28,9 +28,8 @@
  * 而EventLoop是Reactor模型中最重要的一个部分，也就是对应着事件分发器模块
  *
  **/
-class TcpServer : noncopyable
-{
-public:
+class TcpServer : noncopyable {
+   public:
     /**
      * 启动一个线程时候的回调函数
      * 这个回调函数会在EventLoopThread类中的threadFunc函数中被调用
@@ -66,16 +65,13 @@ public:
      **/
     using ThreadInitCallback = std::function<void(EventLoop *)>;
 
-    enum Option
-    {
+    enum Option {
         kNoReusePort,
         kReusePort,
     };
 
-    TcpServer(EventLoop *loop,
-              const InetAddress &listenAddr,
-              const std::string &nameArg,
-              Option option = kNoReusePort);
+    TcpServer(EventLoop *loop, const InetAddress &listenAddr,
+              const std::string &nameArg, Option option = kNoReusePort);
     ~TcpServer();
 
     /**
@@ -89,10 +85,18 @@ public:
      * 因为在TcpConnection中最终会设置handleXXX函数，这个handleXXX函数才是最终在channel中因为触发事件所以被调用的回调函数，
      * 所以我们需要经过这么一长串过程，最终设置TcpConnection中的回调函数，而并非是止步于TcpServer中的回调函数
      */
-    void setThreadInitcallback(const ThreadInitCallback &cb) { threadInitCallback_ = cb; }
-    void setConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; }
-    void setMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; }
-    void setWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
+    void setThreadInitcallback(const ThreadInitCallback &cb) {
+        threadInitCallback_ = cb;
+    }
+    void setConnectionCallback(const ConnectionCallback &cb) {
+        connectionCallback_ = cb;
+    }
+    void setMessageCallback(const MessageCallback &cb) {
+        messageCallback_ = cb;
+    }
+    void setWriteCompleteCallback(const WriteCompleteCallback &cb) {
+        writeCompleteCallback_ = cb;
+    }
 
     // 设置底层subloop的个数
     void setThreadNum(int numThreads);
@@ -100,7 +104,7 @@ public:
     // 开启服务器监听
     void start();
 
-private:
+   private:
     // 封装TcpConnection对象
     void newConnection(int sockfd, const InetAddress &peerAddr);
     void removeConnection(const TcpConnectionPtr &conn);
@@ -110,31 +114,35 @@ private:
 
     /**
      * TcpServer作为用户和服务器的直接桥梁，拥有很多重要的参数
-     * 1. EventLoop *loop_: 根据one loop per thread的思想，TcpServer运行在main线程上
+     * 1. EventLoop *loop_: 根据one loop per
+     * thread的思想，TcpServer运行在main线程上
      * 因此需要有一个配套的mainLoop来运行循环，这个mainLoop的主要作用就是listen来自客户端的连接请求
      * 2. Acceptor acceptor_: 接收来自客户端的连接请求的组件
      * 3. ConnectionCallback、MessageCallback等多个回调函数
-     * 4. TcpConnection: 每个来自客户端的请求都会在TcpServer中被封装成TcpConnection从而发送给subLoop进行处理
-     * 5. EventLoopThreadPool threadPool_: TcpServer操作线程池去创建线程以便运行多个subLoop
+     * 4. TcpConnection:
+     * 每个来自客户端的请求都会在TcpServer中被封装成TcpConnection从而发送给subLoop进行处理
+     * 5. EventLoopThreadPool threadPool_:
+     * TcpServer操作线程池去创建线程以便运行多个subLoop
      */
-    EventLoop *loop_; // baseLoop 用户定义的loop
+    EventLoop *loop_;  // baseLoop 用户定义的loop
 
     const std::string ipPort_;
     const std::string name_;
 
-    std::unique_ptr<Acceptor> acceptor_; // 运行在mainLoop，任务就是监听新连接事件
+    std::unique_ptr<Acceptor>
+        acceptor_;  // 运行在mainLoop，任务就是监听新连接事件
 
-    std::shared_ptr<EventLoopThreadPool> threadPool_; // one loop per thread
+    std::shared_ptr<EventLoopThreadPool> threadPool_;  // one loop per thread
 
     // 以下三个函数会被底层reactor组件调用
-    ConnectionCallback connectionCallback_;       // 有新连接时的回调
-    MessageCallback messageCallback_;             // 有读写消息时的回调
-    WriteCompleteCallback writeCompleteCallback_; // 消息发送完成以后的回调
+    ConnectionCallback connectionCallback_;  // 有新连接时的回调
+    MessageCallback messageCallback_;        // 有读写消息时的回调
+    WriteCompleteCallback writeCompleteCallback_;  // 消息发送完成以后的回调
 
-    ThreadInitCallback threadInitCallback_; // loop线程初始化的回调
+    ThreadInitCallback threadInitCallback_;  // loop线程初始化的回调
 
     std::atomic_int started_;
 
     int nextConnId_;
-    ConnectionMap connections_; // 保存所有的连接
+    ConnectionMap connections_;  // 保存所有的连接
 };

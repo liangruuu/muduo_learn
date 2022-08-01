@@ -1,10 +1,10 @@
 #pragma once
 
-#include "noncopyable.h"
-#include "Timestamp.h"
-
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
+#include "Timestamp.h"
+#include "noncopyable.h"
 
 class Channel;
 class EventLoop;
@@ -14,9 +14,8 @@ class EventLoop;
  * Poller类中全都是纯虚函数，所以Poller本身就是一个抽象类，不能被实例化的
  *
  **/
-class Poller : noncopyable
-{
-public:
+class Poller : noncopyable {
+   public:
     // 对于Poller而言，它要监听很多个channel，所以需要用一个vector来管理
     using ChannelList = std::vector<Channel *>;
 
@@ -45,7 +44,7 @@ public:
      **/
     static Poller *newDefaultPoller(EventLoop *loop);
 
-protected:
+   protected:
     /**
      * map的key：sockfd  value：sockfd所属的channel通道类型
      * Poller所监听的channel是从Eventloop里的channellist来的
@@ -55,6 +54,6 @@ protected:
     using ChannelMap = std::unordered_map<int, Channel *>;
     ChannelMap channels_;
 
-private:
-    EventLoop *ownerLoop_; // 定义Poller所属的事件循环EventLoop
+   private:
+    EventLoop *ownerLoop_;  // 定义Poller所属的事件循环EventLoop
 };

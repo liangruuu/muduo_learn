@@ -1,13 +1,15 @@
 #include "EventLoop.h"
-#include "Logger.h"
-#include "Poller.h"
-#include "Channel.h"
 
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
+
 #include <memory>
+
+#include "Channel.h"
+#include "Logger.h"
+#include "Poller.h"
 
 // 防止一个线程创建多个EventLoop   thread_local
 __thread EventLoop *t_loopInThisThread = nullptr;
@@ -16,11 +18,9 @@ __thread EventLoop *t_loopInThisThread = nullptr;
 const int kPollTimeMs = 10000;
 
 // 创建wakeupfd，用来notify唤醒subReactor处理新来的channel
-int createEventfd()
-{
+int createEventfd() {
     int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-    if (evtfd < 0)
-    {
+    if (evtfd < 0) {
         LOG_FATAL("eventfd error:%d \n", errno);
     }
     return evtfd;
@@ -37,14 +37,12 @@ EventLoop::EventLoop()
       threadId_(CurrentThread::tid()),
       poller_(Poller::newDefaultPoller(this)),
       wakeupFd_(createEventfd()),
-      wakeupChannel_(new Channel(this, wakeupFd_))
-{
+      wakeupChannel_(new Channel(this, wakeupFd_)) {
     LOG_DEBUG("EventLoop created %p in thread %d \n", this, threadId_);
-    if (t_loopInThisThread)
-    {
-        LOG_FATAL("Another EventLoop %p exists in this thread %d \n", t_loopInThisThread, threadId_);
-    }
-    else // 当前线程第一次创建eventloop对象，则给全局变量赋值
+    if (t_loopInThisThread) {
+        LOG_FATAL("Another EventLoop %p exists in this thread %d \n",
+                  t_loopInThisThread, threadId_);
+    } else  // 当前线程第一次创建eventloop对象，则给全局变量赋值
     {
         t_loopInThisThread = this;
     }
@@ -74,8 +72,7 @@ EventLoop::EventLoop()
     wakeupChannel_->enableReading();
 }
 
-EventLoop::~EventLoop()
-{
+EventLoop::~EventLoop() {
     wakeupChannel_->disableAll();
     wakeupChannel_->remove();
     ::close(wakeupFd_);
@@ -83,15 +80,13 @@ EventLoop::~EventLoop()
 }
 
 // 开启事件循环
-void EventLoop::loop()
-{
+void EventLoop::loop() {
     looping_ = true;
     quit_ = false;
 
     LOG_INFO("EventLoop %p start looping \n", this);
 
-    while (!quit_)
-    {
+    while (!quit_) {
         activeChannels_.clear();
         /**
          * 监听两类fd   一种是client的connfd，一种wakeupfd
@@ -101,8 +96,7 @@ void EventLoop::loop()
          * activeChannels_是所有被epoll监听所发生了相应事件的fd相对应封装成的channel所构成的集合
          **/
         pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
-        for (Channel *channel : activeChannels_)
-        {
+        for (Channel *channel : activeChannels_) {
             /**
              * Poller监听哪些channel发生事件了，然后上报给EventLoop，通知channel处理相应的事件
              *
@@ -123,8 +117,10 @@ void EventLoop::loop()
          * 如果说没有调用过muduo库的setThreadNumber函数的话，也就是说只有一个mainLoop，mainLoop不仅仅只做新用户的连接操作，
          * 也负责已连接用户的读写事件，因为现在的计算机多是多核CPU，所以我们会去启动多个subLoop，当mainLoop接受到一个新用户链接的时候，
          * 就会唤醒一个subLoop
-         * mainLoop 事先注册一个回调cb（需要subloop来执行），但是此subloop还在被poller_->poll语句阻塞
-         * 通过eventfd wakeup subloop后，执行下面的方法，执行之前mainloop注册的cb操作，有可能是一个cb也有可能是多个cb
+         * mainLoop
+         * 事先注册一个回调cb（需要subloop来执行），但是此subloop还在被poller_->poll语句阻塞
+         * 通过eventfd wakeup
+         * subloop后，执行下面的方法，执行之前mainloop注册的cb操作，有可能是一个cb也有可能是多个cb
          *
          * 之所以被设置回调操作，肯定是因为被派发了新的channel了，让这个subloop去处理这个channel，最起码这个loop需要执行
          * 把channel添加到channel列表、把channel去往subloop注册等操作，这些操作就是由回调函数去驱动的
@@ -141,17 +137,17 @@ void EventLoop::loop()
  *
  *              mainLoop
  *
- *                                       no ==================== 生产者-消费者的线程安全的队列
+ *                                       no ====================
+ * 生产者-消费者的线程安全的队列
  *
  *  subLoop1     subLoop2     subLoop3
  */
-void EventLoop::quit()
-{
+void EventLoop::quit() {
     quit_ = true;
 
-    // 如果是在其它线程中，调用的quit   在一个subloop(woker)中，调用了mainLoop(IO)的quit
-    if (!isInLoopThread())
-    {
+    // 如果是在其它线程中，调用的quit
+    // 在一个subloop(woker)中，调用了mainLoop(IO)的quit
+    if (!isInLoopThread()) {
         wakeup();
     }
 }
@@ -159,7 +155,8 @@ void EventLoop::quit()
 /**
  * 在当前loop中执行cb
  *
- * 在讲解消息的发送过程时候，我们讲到为了保证对 buffer 和 socket 的写动作是在 IO 线程中进行
+ * 在讲解消息的发送过程时候，我们讲到为了保证对 buffer 和 socket 的写动作是在 IO
+ 线程中进行
  * 使用了一个 runInLoop 函数，将该写任务抛给了 IO 线程处理。
  *
  * runInLoop函数见名知意，该函数希望让一个回调函数cb在一个EventLoop中被执行
@@ -190,7 +187,8 @@ void EventLoop::quit()
  *
  *     EventLoopThread loopThread;
  *     EventLoop *loop = loopThread.startLoop();
- *     // 异步调用runInThread，即将runInThread添加到loop对象所在IO线程，让该IO线程执行
+ *     //
+ 异步调用runInThread，即将runInThread添加到loop对象所在IO线程，让该IO线程执行
  *     loop->runInLoop(runInThread);
  *     sleep(1);
  *
@@ -208,21 +206,17 @@ void EventLoop::quit()
  * 在主线程中调用loop对象的runInLoop方法，则runInLoop函数中的isInLoopThread()判断
  * threadId_为调用runInLoop函数的loop对象，而CurThread则为mainLoop
  */
-void EventLoop::runInLoop(Functor cb)
-{
+void EventLoop::runInLoop(Functor cb) {
     // 如果调用时是此 EventLoop 的运行线程，则直接执行此cb函数。
-    if (isInLoopThread())
-    {
+    if (isInLoopThread()) {
         cb();
-    }
-    else // 在非当前loop线程中执行cb , 就需要唤醒loop所在线程，执行cb
+    } else  // 在非当前loop线程中执行cb , 就需要唤醒loop所在线程，执行cb
     {
         queueInLoop(cb);
     }
 }
 // 把cb放入队列中，唤醒loop所在的线程，执行cb
-void EventLoop::queueInLoop(Functor cb)
-{
+void EventLoop::queueInLoop(Functor cb) {
     // 因为pendingFunctors_可能被多个线程访问，所以需要设置锁
     {
         std::unique_lock<std::mutex> lock(mutex_);
@@ -231,15 +225,15 @@ void EventLoop::queueInLoop(Functor cb)
 
     /**
      * 唤醒相应的，需要执行上面回调操作的loop的线程了
-     * || callingPendingFunctors_的意思是：当前loop正在执行回调，但是loop又有了新的回调
+     * ||
+     * callingPendingFunctors_的意思是：当前loop正在执行回调，但是loop又有了新的回调
      *
      * 因为虽然EaventLoop对应的pendingFunctors_待执行函数队列中有函数需要被执行
      * 但是此时的EventLoop正在被loop循环，即epoll.wait函数所阻塞
      * 因此需要唤醒阻塞从而让loop所在线程去执行这些放在pendingFunctors_队列中的函数
      */
-    if (!isInLoopThread() || callingPendingFunctors_)
-    {
-        wakeup(); // 唤醒loop所在线程
+    if (!isInLoopThread() || callingPendingFunctors_) {
+        wakeup();  // 唤醒loop所在线程
     }
 }
 
@@ -248,8 +242,7 @@ void EventLoop::queueInLoop(Functor cb)
  * mainreactor就可以通过给wakeupchannel发送(write)一个消息，则subreactor就可以感知到wakeupfd上有读事件发生，
  * 并且由此被唤醒，从而获取到mainloop传递过来的新用户链接的channel
  **/
-void EventLoop::handleRead()
-{
+void EventLoop::handleRead() {
     // 8字节
     uint64_t one = 1;
     /**
@@ -257,44 +250,39 @@ void EventLoop::handleRead()
      * 而read函数又读取了从pipefd[1]中写入的一字节标识数据，从而触发了对应被注册在了epoll对象中的EPOLLIN事件
      */
     ssize_t n = read(wakeupFd_, &one, sizeof one);
-    if (n != sizeof one)
-    {
+    if (n != sizeof one) {
         LOG_ERROR("EventLoop::handleRead() reads %lu bytes instead of 8", n);
     }
 }
 
-// 用来唤醒loop所在的线程的  向wakeupfd_写一个数据，wakeupChannel就发生读事件，当前loop线程就会被唤醒
-void EventLoop::wakeup()
-{
+// 用来唤醒loop所在的线程的
+// 向wakeupfd_写一个数据，wakeupChannel就发生读事件，当前loop线程就会被唤醒
+void EventLoop::wakeup() {
     uint64_t one = 1;
     /**
      * 我们在EventLoop.h文件中已经详细地分析了wakeupfd的作用，对wakeupfd的操作跟对信号操作是一个性质
      * 所以这里对wakeupfd写一个字节的数据等价于在信号回调函数中往pipefd[1]写入一个标识数据
      */
     ssize_t n = write(wakeupFd_, &one, sizeof one);
-    if (n != sizeof one)
-    {
+    if (n != sizeof one) {
         LOG_ERROR("EventLoop::wakeup() writes %lu bytes instead of 8 \n", n);
     }
 }
 
 // EventLoop的方法 =》 Poller的方法
-void EventLoop::updateChannel(Channel *channel)
-{
+void EventLoop::updateChannel(Channel *channel) {
     poller_->updateChannel(channel);
 }
 
-void EventLoop::removeChannel(Channel *channel)
-{
+void EventLoop::removeChannel(Channel *channel) {
     poller_->removeChannel(channel);
 }
 
-bool EventLoop::hasChannel(Channel *channel)
-{
+bool EventLoop::hasChannel(Channel *channel) {
     return poller_->hasChannel(channel);
 }
 
-void EventLoop::doPendingFunctors() // 执行回调
+void EventLoop::doPendingFunctors()  // 执行回调
 {
     std::vector<Functor> functors;
     callingPendingFunctors_ = true;
@@ -304,9 +292,8 @@ void EventLoop::doPendingFunctors() // 执行回调
         functors.swap(pendingFunctors_);
     }
 
-    for (const Functor &functor : functors)
-    {
-        functor(); // 执行当前loop需要执行的回调操作
+    for (const Functor &functor : functors) {
+        functor();  // 执行当前loop需要执行的回调操作
     }
 
     callingPendingFunctors_ = false;

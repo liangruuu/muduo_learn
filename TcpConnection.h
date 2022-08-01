@@ -1,14 +1,14 @@
 #pragma once
 
-#include "noncopyable.h"
-#include "InetAddress.h"
-#include "Callbacks.h"
-#include "Buffer.h"
-#include "Timestamp.h"
-
+#include <atomic>
 #include <memory>
 #include <string>
-#include <atomic>
+
+#include "Buffer.h"
+#include "Callbacks.h"
+#include "InetAddress.h"
+#include "Timestamp.h"
+#include "noncopyable.h"
 
 class Channel;
 class EventLoop;
@@ -24,15 +24,15 @@ class Socket;
  *
  *
  * TcpServer => Acceptor => 有一个新用户连接，通过accept函数拿到connfd
- * =》 打包TcpConnection =》设置回调 Channel =》注册 Poller =》监听到事件发生 Channel的回调操作
+ * =》 打包TcpConnection =》设置回调 Channel =》注册 Poller =》监听到事件发生
+ * Channel的回调操作
  *
  */
-class TcpConnection : noncopyable, public std::enable_shared_from_this<TcpConnection>
-{
-public:
+class TcpConnection : noncopyable,
+                      public std::enable_shared_from_this<TcpConnection> {
+   public:
     TcpConnection(EventLoop *loop, const std::string &name, int sockfd,
-                  const InetAddress &localAddr,
-                  const InetAddress &peerAddr);
+                  const InetAddress &localAddr, const InetAddress &peerAddr);
     ~TcpConnection();
 
     EventLoop *getLoop() const { return loop_; }
@@ -53,46 +53,34 @@ public:
      * 用户把函数给了TcpServer，TcpServer再把函数给了TcpConnection，TcpConnection再把函数封装到Channel中
      * Channel随后就加入poller，poller监听到事件发生随之channel就调用相应的回调函数
      **/
-    void setConnectionCallback(const ConnectionCallback &cb)
-    {
+    void setConnectionCallback(const ConnectionCallback &cb) {
         connectionCallback_ = cb;
     }
 
-    void setMessageCallback(const MessageCallback &cb)
-    {
+    void setMessageCallback(const MessageCallback &cb) {
         messageCallback_ = cb;
     }
 
-    void setWriteCompleteCallback(const WriteCompleteCallback &cb)
-    {
+    void setWriteCompleteCallback(const WriteCompleteCallback &cb) {
         writeCompleteCallback_ = cb;
     }
 
-    void setHighWaterMarkCallback(const HighWaterMarkCallback &cb, size_t highWaterMark)
-    {
+    void setHighWaterMarkCallback(const HighWaterMarkCallback &cb,
+                                  size_t highWaterMark) {
         highWaterMarkCallback_ = cb;
         highWaterMark_ = highWaterMark;
     }
 
-    void setCloseCallback(const CloseCallback &cb)
-    {
-        closeCallback_ = cb;
-    }
+    void setCloseCallback(const CloseCallback &cb) { closeCallback_ = cb; }
 
     // 连接建立
     void connectEstablished();
     // 连接销毁
     void connectDestroyed();
 
-private:
+   private:
     // 连接状态
-    enum StateE
-    {
-        kDisconnected,
-        kConnecting,
-        kConnected,
-        kDisconnecting
-    };
+    enum StateE { kDisconnected, kConnecting, kConnected, kDisconnecting };
     void setState(StateE state) { state_ = state; }
 
     // handle函数都会被注册在channel中，等到事件发生时被调用
@@ -104,7 +92,8 @@ private:
     void sendInLoop(const void *message, size_t len);
     void shutdownInLoop();
 
-    EventLoop *loop_; // 这里绝对不是baseLoop， 因为TcpConnection都是在subLoop里面管理的
+    EventLoop *loop_;  // 这里绝对不是baseLoop，
+                       // 因为TcpConnection都是在subLoop里面管理的
     const std::string name_;
     std::atomic_int state_;
     bool reading_;
@@ -123,9 +112,9 @@ private:
      * 下面的几个函数都被执行于handleXXX函数中，而handleXXX函数都会被注册在channel中，
      * 最终会在channel对应的fd发生感兴趣的事件时被调用，而这几个函数都是用户所自定义的，详情参考test_server.c
      */
-    ConnectionCallback connectionCallback_;       // 有新连接时的回调
-    MessageCallback messageCallback_;             // 有读写消息时的回调
-    WriteCompleteCallback writeCompleteCallback_; // 消息发送完成以后的回调
+    ConnectionCallback connectionCallback_;  // 有新连接时的回调
+    MessageCallback messageCallback_;        // 有读写消息时的回调
+    WriteCompleteCallback writeCompleteCallback_;  // 消息发送完成以后的回调
     /**
      * 到达水位回时候地调函数
      * 顾名思义：越过了水位线就会出问题，需要控制在水位线以下
@@ -137,6 +126,6 @@ private:
     size_t highWaterMark_;
 
     // 接收缓冲区中的read区域数据是从fd中获取的，发送缓冲区中的read区域数据是要往fd中发送的
-    Buffer inputBuffer_;  // 接收数据的缓冲区
-    Buffer outputBuffer_; // 发送数据的缓冲区
+    Buffer inputBuffer_;   // 接收数据的缓冲区
+    Buffer outputBuffer_;  // 发送数据的缓冲区
 };
